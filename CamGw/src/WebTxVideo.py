@@ -35,3 +35,5 @@ class WebTxVideo():
     def DataAvailable(self):
         return True
     
+    def GetHeaders(self):
+        return self._Handle.info().dict
