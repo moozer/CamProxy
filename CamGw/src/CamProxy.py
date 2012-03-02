@@ -44,18 +44,24 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             self.send_error(404, Mes) 
             return
 
-        if CamType == 'WebTx':
-            CamObject = WebTxVideo( CamName )
-            BlackList = ['Server', 'Auther', 'server']
-        elif CamType == 'Trendnet':
-            CamObject = TrendnetCamType( CamName )
-            BlackList = ['server']
-        else:
-            Mes  = 'Unknown Camera type: %s not in camera list\n' % CamType
-            Mes += HelpText
+        try:
+            if CamType == 'WebTx':
+                CamObject = WebTxVideo( CamName )
+                BlackList = ['Server', 'Auther', 'server']
+            elif CamType == 'Trendnet':
+                CamObject = TrendnetCamType( CamName )
+                BlackList = ['server']
+            else:
+                Mes  = 'Unknown Camera type: %s not in camera list\n' % CamType
+                Mes += HelpText
+                self.send_error(404, Mes) 
+                return
+        except Exception:
+            Mes  = 'Failed to initialize camera: %s\n' % CamName
+            Mes += HelpText            
             self.send_error(404, Mes) 
             return
-            
+
         # and pipe data based on camera object.
         self.send_response(200)
         headers = CamObject.GetHeaders()
