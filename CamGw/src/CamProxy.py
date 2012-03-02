@@ -18,20 +18,32 @@ from WebTxVideo import WebTxVideo
 from TrendnetCamType import TrendnetCamType
 import string
 from SocketServer import ThreadingMixIn
-import threading
 
 PORT = 8001
-CamTypeList = ['WebTx', 'Trendnet']
+
+HelpText = '''
+Usage:
+server:%d/<Camtype>/<host>
+
+With Camtype being WebTx or Trendnet
+and host is resolvable name to the camera
+
+''' % (PORT)
 
 class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
-    ''' Acts as authenticating gateway to samsung web tx boxes '''
+    ''' Acts as authenticating gateway to samsung web tx boxes and other cam types '''
     def do_GET(self):
 #        try:
         CameraString = string.lstrip(self.path, '/')
-        
-        # TODO: something about ValueError
-        CamType, CamName = string.split( CameraString, '/', 1)
-    
+
+        try:
+            CamType, CamName = string.split( CameraString, '/', 1)
+        except ValueError:
+            Mes  = 'Failed to read Camtype\n'
+            Mes += HelpText            
+            self.send_error(404, Mes) 
+            return
+
         if CamType == 'WebTx':
             CamObject = WebTxVideo( CamName )
             BlackList = ['Server', 'Auther', 'server']
@@ -40,7 +52,7 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             BlackList = ['server']
         else:
             Mes  = 'Unknown Camera type: %s not in camera list\n' % CamType
-            Mes += 'Try WebTx or Trendnet'
+            Mes += HelpText
             self.send_error(404, Mes) 
             return
             
