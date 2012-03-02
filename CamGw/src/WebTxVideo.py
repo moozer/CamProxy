@@ -20,7 +20,7 @@ class WebTxVideo():
         self._Username = 'root'
         self._Password = 'root'
         self._ServerName = ServerName
-        self._ServerPath = '/cgi-bin/fwstream.cgi?ServerId=0&CameraId=1&FwCgiVer=0x0101&PauseTime=0'
+        self._ServerPath = '/cgi-bin/fwstream.cgi?ServerId=0&CameraId=1&FwCgiVer=0x0101&PauseTime=30'
         
         req = urllib2.Request('http://%s%s'%(self._ServerName, self._ServerPath))
 
