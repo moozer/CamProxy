@@ -5,16 +5,20 @@ Created on 28 Feb 2012
 
 @author: moz
 
-Basics mostly from the python docs
+References and inspiration
 http://docs.python.org/library/simplehttpserver.html#module-SimpleHTTPServer
-
 http://www.daniweb.com/software-development/python/threads/30410
+http://www.doughellmann.com/PyMOTW/BaseHTTPServer/index.html#module-BaseHTTPServer
+
+
 '''
 import SocketServer
-from BaseHTTPServer import BaseHTTPRequestHandler
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from WebTxVideo import WebTxVideo
 from TrendnetCamType import TrendnetCamType
 import string
+from SocketServer import ThreadingMixIn
+import threading
 
 PORT = 8001
 CamTypeList = ['WebTx', 'Trendnet']
@@ -55,19 +59,27 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
 #        except IOError as e:
 #            print e
 #            self.send_error(501,'Failed to forward request: %s' % CamName)
-        
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Handle requests in a separate thread."""
+
 if __name__ == '__main__':
-    Handler = CamGwHttpRequestHandler 
-    httpd = SocketServer.TCPServer(("", PORT), Handler)
-    try:
-        print "serving at port", PORT
-        #httpd.handle_request()
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print '^C received, shutting down server'
-    except Exception as e:
-        print "something went wrong %s" % e
-        
-    print "and closing socket"
-    httpd.socket.close()
+    server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
+    print 'Starting server, use <Ctrl-C> to stop'
+    server.serve_forever()
+    
+#if __name__ == '__main__':
+#    Handler = CamGwHttpRequestHandler 
+#    httpd = SocketServer.TCPServer(("", PORT), Handler)
+#    try:
+#        print "serving at port", PORT
+#        #httpd.handle_request()
+#        httpd.serve_forever()
+#    except KeyboardInterrupt:
+#        print '^C received, shutting down server'
+#    except Exception as e:
+#        print "something went wrong %s" % e
+#        
+#    print "and closing socket"
+#    httpd.socket.close()
     
