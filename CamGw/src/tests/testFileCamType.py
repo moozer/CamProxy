@@ -7,7 +7,9 @@ import unittest
 
 from FileCamType import FileCamType
 
-MjpegFilename = "FormallyCorrectMjpeg.mjpg"
+#MjpegFilename = "FormallyCorrectMjpeg.mjpg"
+MjpegFilename = "FromTrendnet.mjpeg"
+FirstJpegImage = "FirstImage.jpg"
 
 class Test(unittest.TestCase):
 
@@ -15,6 +17,17 @@ class Test(unittest.TestCase):
         FileCamType( MjpegFilename )
         pass
 
+    def testReadFirstImage(self):
+        Cam = FileCamType( MjpegFilename )
+        Img = Cam.read()
+        fp = open("test.jpg", "w" )
+        fp.write( Img )
+        KnownImg = open( FirstJpegImage ).read()
+        
+        self.assertEqual( Img, KnownImg )
+        pass
+
+    
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
