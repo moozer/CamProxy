@@ -40,13 +40,19 @@ class FileCamType( CamType ):
     def _ReadContentStrings(self):      
         # line is the image boundary
         line = string.rstrip( self._Handle.readline() )
+        while line == '': # allow empty lines before
+            line = string.rstrip( self._Handle.readline() )
         if not line.startswith( self._Boundary ):
-            raise ValueError( "Malformed mjpeg: First image boundary not found" )
+            raise ValueError( "Malformed mjpeg: Image boundary not found" )
+        
         # trendnet hack boundary and contenttype is on same line...
         # TODO: check on content-length
+        if line == "%s--"%self._Boundary: 
+            line = string.rstrip( self._Handle.readline() )
+
         (type, value) = string.split( line, ": ", 1)
         self._NextImageLength = int( value )
-
+            
         # next line is the Content-type
         line = string.rstrip( self._Handle.readline() )
         (type, value) = string.split( line, ": ", 1)
@@ -69,6 +75,8 @@ class FileCamType( CamType ):
             self._ReadFirstImage()
             self._ReadContentStrings()
 
-        return self._ReadImage()
-        
+        Img = self._ReadImage()
+        self._ImageCount = self._ImageCount +1
+        self._ReadContentStrings()
+        return Img
 

@@ -9,7 +9,8 @@ from FileCamType import FileCamType
 
 #MjpegFilename = "FormallyCorrectMjpeg.mjpg"
 MjpegFilename = "FromTrendnet.mjpeg"
-FirstJpegImage = "FirstImage.jpg"
+JpegImage1 = "FirstImage.jpg"
+JpegImage2 = "SecondImage.jpg"
 
 class Test(unittest.TestCase):
 
@@ -20,8 +21,15 @@ class Test(unittest.TestCase):
     def testReadFirstImage(self):
         Cam = FileCamType( MjpegFilename )
         Img = Cam.read()
-        KnownImg = open( FirstJpegImage ).read()
-        
+        KnownImg = open( JpegImage1 ).read()
+        self.assertEqual( Img, KnownImg )
+        pass
+
+    def testReadTwoImages(self):
+        Cam = FileCamType( MjpegFilename )
+        Cam.read()
+        Img = Cam.read()
+        KnownImg = open( JpegImage2 ).read()
         self.assertEqual( Img, KnownImg )
         pass
 
