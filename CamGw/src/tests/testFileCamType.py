@@ -20,8 +20,6 @@ class Test(unittest.TestCase):
     def testReadFirstImage(self):
         Cam = FileCamType( MjpegFilename )
         Img = Cam.read()
-        fp = open("test.jpg", "w" )
-        fp.write( Img )
         KnownImg = open( FirstJpegImage ).read()
         
         self.assertEqual( Img, KnownImg )
