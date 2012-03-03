@@ -8,7 +8,7 @@ import unittest
 from FileCamType import FileCamType
 
 #MjpegFilename = "FormallyCorrectMjpeg.mjpg"
-MjpegFilename = "FromTrendnet.mjpeg"
+MjpegFilename = "FromTrendnet"
 JpegImage1 = "FirstImage.jpg"
 JpegImage2 = "SecondImage.jpg"
 

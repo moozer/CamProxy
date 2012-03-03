@@ -10,73 +10,20 @@ import string
 class FileCamType( CamType ):
     '''
     Test camera type to load from file
+    @param ServerName: the name of the mjpeg fil to open. 
     '''
 
-
-    def __init__(self, Filename, Boundary = "--video boundary"):
-        '''
-        Constructor
-        '''
-        self._ServerName = Filename
-        self._Boundary = Boundary
-        self._JpegContentType = "image/jpeg"
-        
-        self._OpenHandle()
-        self._ImageCount = 0
-        
-        
     def _OpenHandle(self):
-        self._Handle =  open( self._ServerName, "rb")
-    
-    def _CloseHandle(self):
-        self._Handle.close()
+        self._Handle = open( self._ServerName+".mjpeg", "rb")
         
-    def _ReadFirstImage(self ):
+    def _ReadMultipart(self ):
+        ''' Read the first line and extracts the boundary '''
         # first line is the boundary definition tag line
         line = string.rstrip( self._Handle.readline() )
-        if not line.startswith( self._Boundary ):
-            raise ValueError( "Malformed mjpeg: Missing multipart start tag" )
-                   
-    def _ReadContentStrings(self):      
-        # line is the image boundary
-        line = string.rstrip( self._Handle.readline() )
-        while line == '': # allow empty lines before
-            line = string.rstrip( self._Handle.readline() )
-        if not line.startswith( self._Boundary ):
-            raise ValueError( "Malformed mjpeg: Image boundary not found" )
         
-        # trendnet hack boundary and contenttype is on same line...
-        # TODO: check on content-length
-        if line == "%s--"%self._Boundary: 
-            line = string.rstrip( self._Handle.readline() )
+        elements = string.split( line, "--")
+        
+        if len(elements) != 3:
+            raise ValueError( "Malformed mjpeg: Unable to extract boundary from first line: %s" %line )
 
-        (type, value) = string.split( line, ": ", 1)
-        self._NextImageLength = int( value )
-            
-        # next line is the Content-type
-        line = string.rstrip( self._Handle.readline() )
-        (type, value) = string.split( line, ": ", 1)
-
-        if value != self._JpegContentType:
-            raise ValueError( "Malformed mjpeg: bad content-type - expected '%s', got '%s'"%(self._JpegContentType, value) )
-
-        # and an empty line
-        line = self._Handle.readline()
-        if line != "\r\n":
-            raise ValueError("Malformed mjpeg: missing empty line")
-
-    def _ReadImage(self):
-        return self._Handle.read( self._NextImageLength )
-         
-           
-    def read(self):
-        ''' Read from mjpeg and returns the next image '''
-        if self._ImageCount == 0:
-            self._ReadFirstImage()
-            self._ReadContentStrings()
-
-        Img = self._ReadImage()
-        self._ImageCount = self._ImageCount +1
-        self._ReadContentStrings()
-        return Img
-
+        self._Boundary = "--%s"%elements[1]
