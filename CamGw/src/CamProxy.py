@@ -20,6 +20,8 @@ from FileCamType import FileCamType
 import string
 from SocketServer import ThreadingMixIn
 import time
+import sys
+
 
 PORT = 8001
 
@@ -88,6 +90,7 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             self.wfile.write( CamObject.BoundaryText() )    
             self.wfile.write( CamObject.read() )
             self.wfile.write( "\r\n" )            
+            sys.stderr.write(".")
             time.sleep( 0.1 )
            
         self.wfile.close()
@@ -99,18 +102,18 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
 
 if __name__ == '__main__':
-    DoMultiThreaded = False
+    DoMultiThreaded = True
+    
     if DoMultiThreaded:
         server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
         print 'Starting server, use <Ctrl-C> to stop'
         server.serve_forever()
-    else:
+    else: # run once
         Handler = CamGwHttpRequestHandler 
         httpd = SocketServer.TCPServer(("", PORT), Handler)
         try:
             print "serving at port", PORT
-            #httpd.handle_request()
-            httpd.serve_forever()
+            httpd.handle_request()
         except KeyboardInterrupt:
             print '^C received, shutting down server'
         except Exception as e:
