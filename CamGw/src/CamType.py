@@ -57,11 +57,13 @@ class CamType(object):
         sets the self._NextImageLength based on content-length
         '''
         # line is the image boundary
-        line = string.rstrip( self._Handle.readline() )
-        while line == '': # allow empty lines before
-            line = string.rstrip( self._Handle.readline() )
+        rawline = self._Handle.readline()
+        while rawline == '\r\n': # 
+            rawline = self._Handle.readline()
+        
+        line = string.rstrip( rawline )
         if not line.startswith( "--%s"%self._Boundary ):
-            raise ValueError( "Malformed mjpeg: Image boundary not found in line: %s"%line )
+            raise ValueError( "Malformed mjpeg or EOF: Image boundary not found in line: %s"%line )
         
         # trendnet hack boundary and contenttype is on same line...
         # TODO: check on content-length
