@@ -85,16 +85,29 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             
         self.end_headers()
 
-        #self.wfile.write( "--%s--\r\n"%CamObject.GetBoundary() )
-        while CamObject.DataAvailable():
-            #write boundary
-            self.wfile.write( CamObject.BoundaryText() )    
-            self.wfile.write( CamObject.read() )
-            self.wfile.write( "\r\n" )            
-            sys.stderr.write(".")
-            time.sleep( 0.1 )
-           
-        self.wfile.close()
+        try:
+            #self.wfile.write( "--%s--\r\n"%CamObject.GetBoundary() )
+            while CamObject.DataAvailable():
+                try:
+                    #write boundary
+                    self.wfile.write( CamObject.BoundaryText() )    
+                    self.wfile.write( CamObject.read() )
+                    self.wfile.write( "\r\n" )            
+                    sys.stderr.write(".")
+                    time.sleep( 0.1 )
+                except ValueError:
+                    sys.stderr.write("Bad data. Ignoring.\n")
+        except Exception as e:
+            if e.errno == 32:
+                mes = "Graceful client disconnect after %d images\n" % CamObject.GetImageCount()
+                sys.stderr.write(mes)
+            else:
+                mes  = "Unhandled bad stuff after %d images\n" % CamObject.GetImageCount()
+                mes += "Exception caught: %s " % e
+                sys.stderr.write(mes)
+                self.wfile.close()
+                
+        CamObject.close()
 #        except IOError as e:
 #            print e
 #            self.send_error(501,'Failed to forward request: %s' % CamName)
@@ -107,7 +120,7 @@ if __name__ == '__main__':
     
     if DoMultiThreaded:
         server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
-        print 'Starting server, use <Ctrl-C> to stop'
+        print 'Starting server on port %d, use <Ctrl-C> to stop' % PORT
         server.serve_forever()
     else: # run once
         Handler = CamGwHttpRequestHandler 

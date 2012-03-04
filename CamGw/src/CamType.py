@@ -123,6 +123,12 @@ class CamType(object):
     
     def GetHeaders(self):
         return {'content-type': 'multipart/x-mixed-replace;boundary=%s'%self._Boundary }  
+
+    def GetImageCount(self):
+        return self._ImageCount
     
     def DataAvailable(self):
         return True  
+    
+    def close(self):
+        self._Handle.close()
