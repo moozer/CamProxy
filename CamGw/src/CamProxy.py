@@ -14,7 +14,7 @@ http://www.doughellmann.com/PyMOTW/BaseHTTPServer/index.html#module-BaseHTTPServ
 '''
 import SocketServer
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from WebTxVideo import WebTxVideo
+from WebTxVideoCamType import WebTxVideoCamType
 from TrendnetCamType import TrendnetCamType
 from FileCamType import FileCamType
 import string
@@ -23,7 +23,7 @@ import time
 import sys
 
 
-PORT = 8001
+PORT = 8000
 
 HelpText = '''
 Usage:
@@ -50,8 +50,8 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
 
         try:
             if CamType == 'WebTx':
-                CamObject = WebTxVideo( CamName )
-                BlackList = ['Server', 'Auther', 'server']
+                CamObject = WebTxVideoCamType( CamName )
+                BlackList = ['Server', 'server']
                 ExtraHeaders = {}
             elif CamType == 'Trendnet':
                 CamObject = TrendnetCamType( CamName )
@@ -66,8 +66,9 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                 Mes += HelpText
                 self.send_error(404, Mes) 
                 return
-        except Exception:
+        except Exception as e:
             Mes  = 'Failed to initialize camera: %s\n' % CamName
+            Mes += "Error: %s"%e
             Mes += HelpText            
             self.send_error(404, Mes) 
             return
