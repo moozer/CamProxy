@@ -16,8 +16,10 @@ import SocketServer
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from WebTxVideo import WebTxVideo
 from TrendnetCamType import TrendnetCamType
+from FileCamType import FileCamType
 import string
 from SocketServer import ThreadingMixIn
+import time
 
 PORT = 8001
 
@@ -25,8 +27,8 @@ HelpText = '''
 Usage:
 server:%d/<Camtype>/<host>
 
-With Camtype being WebTx or Trendnet
-and host is resolvable name to the camera
+With Camtype being File, WebTx or Trendnet
+and host is resolvable name to the camera (or filename)
 
 ''' % (PORT)
 
@@ -48,9 +50,15 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             if CamType == 'WebTx':
                 CamObject = WebTxVideo( CamName )
                 BlackList = ['Server', 'Auther', 'server']
+                ExtraHeaders = {}
             elif CamType == 'Trendnet':
                 CamObject = TrendnetCamType( CamName )
-                BlackList = ['server']
+                BlackList = ['server', 'content-type']
+                ExtraHeaders = {'content-type': 'multipart/x-mixed-replace;boundary=%s'%CamObject.GetBoundary()}                
+            elif CamType == 'File':
+                CamObject = FileCamType( CamName )
+                BlackList = []
+                ExtraHeaders = {'content-type': 'multipart/x-mixed-replace;boundary=%s'%CamObject.GetBoundary()}                                
             else:
                 Mes  = 'Unknown Camera type: %s not in camera list\n' % CamType
                 Mes += HelpText
@@ -69,11 +77,20 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
             if header in BlackList:
                 continue
             self.send_header( header, headers[header])
+        for header in ExtraHeaders.keys():
+            self.send_header( header, ExtraHeaders[header])
+            
         self.end_headers()
 
+        #self.wfile.write( "--%s--\r\n"%CamObject.GetBoundary() )
         while CamObject.DataAvailable():
-            self.wfile.write( CamObject.read() )    
+            #write boundary
+            self.wfile.write( CamObject.BoundaryText() )    
+            self.wfile.write( CamObject.read() )
+            self.wfile.write( "\r\n" )            
+            time.sleep( 0.1 )
            
+        self.wfile.close()
 #        except IOError as e:
 #            print e
 #            self.send_error(501,'Failed to forward request: %s' % CamName)
@@ -82,22 +99,23 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
 
 if __name__ == '__main__':
-    server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
-    print 'Starting server, use <Ctrl-C> to stop'
-    server.serve_forever()
-    
-#if __name__ == '__main__':
-#    Handler = CamGwHttpRequestHandler 
-#    httpd = SocketServer.TCPServer(("", PORT), Handler)
-#    try:
-#        print "serving at port", PORT
-#        #httpd.handle_request()
-#        httpd.serve_forever()
-#    except KeyboardInterrupt:
-#        print '^C received, shutting down server'
-#    except Exception as e:
-#        print "something went wrong %s" % e
-#        
-#    print "and closing socket"
-#    httpd.socket.close()
-    
+    DoMultiThreaded = False
+    if DoMultiThreaded:
+        server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
+        print 'Starting server, use <Ctrl-C> to stop'
+        server.serve_forever()
+    else:
+        Handler = CamGwHttpRequestHandler 
+        httpd = SocketServer.TCPServer(("", PORT), Handler)
+        try:
+            print "serving at port", PORT
+            #httpd.handle_request()
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print '^C received, shutting down server'
+        except Exception as e:
+            print "something went wrong %s" % e
+            
+        print "and closing socket"
+        httpd.socket.close()
+   
