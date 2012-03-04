@@ -52,35 +52,57 @@ class CamType(object):
         if not line.startswith( "--%s"%self._Boundary ):
             raise ValueError( "Malformed mjpeg: Missing multipart start tag in line: %s"%line )
                    
+
+    def _HandleContentType(self ):
+        ''' read the next line, check for content type and verifies it
+        @return: Return the last line read
+        '''
+        line = string.rstrip( self._Handle.readline() )
+        (typeid, value) = string.split( line, ": ", 1)
+ 
+        if typeid.lower() != "content-type":
+            raise ValueError("Content-type not found in line: %s" % line)
+        if value != self._JpegContentType:
+            raise ValueError("Malformed mjpeg: bad content-type - expected '%s', got '%s'" % (self._JpegContentType, value))
+
+        return line
+
+    def _HandleContentLength(self ):
+        ''' read the next line, check for content length and sets the NextImageLength
+        @return: Return the last line read
+        '''
+        line = string.rstrip( self._Handle.readline() )
+        (typeid, value) = string.split( line, ": ", 1)
+
+        if typeid.lower() != "content-length":
+            raise ValueError("Content-length not found in line: %s" % line)
+        self._NextImageLength = int(value)
+        
+        return line
+
+    def _HandleMultipartBoundary(self):
+        ''' Read empty lines until the multipart boundary is reached 
+        @return: Return the last line read
+        '''
+        rawline = self._Handle.readline()
+        while rawline == '\r\n': #
+            rawline = self._Handle.readline()
+        
+        line = string.rstrip(rawline)
+        if not line.startswith("--%s" % self._Boundary):
+            raise ValueError("Malformed mjpeg or EOF: Image boundary not found in line: %s" % line)
+
+        return line
+
     def _ReadContentStrings(self):
         ''' read the boundary, content-length and content-type
         sets the self._NextImageLength based on content-length
         '''
-        # line is the image boundary
-        rawline = self._Handle.readline()
-        while rawline == '\r\n': # 
-            rawline = self._Handle.readline()
-        
-        line = string.rstrip( rawline )
-        if not line.startswith( "--%s"%self._Boundary ):
-            raise ValueError( "Malformed mjpeg or EOF: Image boundary not found in line: %s"%line )
-        
-        # trendnet hack boundary and contenttype is on same line...
-        # TODO: check on content-length
-        if line == "--%s--"%self._Boundary: 
-            line = string.rstrip( self._Handle.readline() )
+        self._HandleMultipartBoundary()
+        self._HandleContentLength()
+        self._HandleContentType()
 
-        (type, value) = string.split( line, ": ", 1)
-        self._NextImageLength = int( value )
-            
-        # next line is the Content-type
-        line = string.rstrip( self._Handle.readline() )
-        (type, value) = string.split( line, ": ", 1)
-
-        if value != self._JpegContentType:
-            raise ValueError( "Malformed mjpeg: bad content-type - expected '%s', got '%s'"%(self._JpegContentType, value) )
-
-        # and an empty line
+        # and skip an empty line
         line = self._Handle.readline()
         if line != "\r\n":
             raise ValueError("Malformed mjpeg: missing empty line")
