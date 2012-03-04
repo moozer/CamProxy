@@ -20,7 +20,7 @@ class CamType(object):
         self._Boundary = "ToBeSetLater"
         self._JpegContentType = "image/jpeg"
         self._ImageCount = 0
-        self._NextImageLength = 0
+        self._NextImageLength = -1
         
         self._OpenHandle()
         
@@ -43,6 +43,8 @@ class CamType(object):
     def _ReadImage(self):
         ''' Read the next image. Default to reading the number of bytes defined
         by self._NextImageLength '''
+        if self._NextImageLength < 0:
+            raise ValueError("Next image size is unknown")
         return self._Handle.read( self._NextImageLength )
          
     def _ReadMultipart(self ):
@@ -58,11 +60,11 @@ class CamType(object):
         @return: Return the last line read
         '''
         line = string.rstrip( self._Handle.readline() )
-        (typeid, value) = string.split( line, ": ", 1)
+        (typeid, value) = string.split( line, ":", 1)
  
         if typeid.lower() != "content-type":
             raise ValueError("Content-type not found in line: %s" % line)
-        if value != self._JpegContentType:
+        if string.strip(value) != self._JpegContentType:
             raise ValueError("Malformed mjpeg: bad content-type - expected '%s', got '%s'" % (self._JpegContentType, value))
 
         return line
@@ -72,11 +74,11 @@ class CamType(object):
         @return: Return the last line read
         '''
         line = string.rstrip( self._Handle.readline() )
-        (typeid, value) = string.split( line, ": ", 1)
+        (typeid, value) = string.split( line, ":", 1)
 
         if typeid.lower() != "content-length":
             raise ValueError("Content-length not found in line: %s" % line)
-        self._NextImageLength = int(value)
+        self._NextImageLength = int(string.strip(value))
         
         return line
 
@@ -110,7 +112,8 @@ class CamType(object):
            
     def BoundaryText(self):
         text  = "\r\n--%s\r\n"%self._Boundary
-        text += "Content-length: %d\r\n" % self._NextImageLength
+        if self._NextImageLength > 0:
+            text += "Content-length: %d\r\n" % self._NextImageLength
         text += "Content-type: %s\r\n" %self._JpegContentType
         text += "\r\n"
         return text
