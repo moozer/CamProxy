@@ -88,7 +88,7 @@ class CamType(object):
            
     def BoundaryText(self):
         text  = "\r\n--%s\r\n"%self._Boundary
-        #text += "Content-length: %d\r\n" % self._NextImageLength
+        text += "Content-length: %d\r\n" % self._NextImageLength
         text += "Content-type: %s\r\n" %self._JpegContentType
         text += "\r\n"
         return text
