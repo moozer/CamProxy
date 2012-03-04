@@ -26,4 +26,4 @@ class FileCamType( CamType ):
         if len(elements) != 3:
             raise ValueError( "Malformed mjpeg: Unable to extract boundary from first line: %s" %line )
 
-        self._Boundary = "--%s"%elements[1]
+        self._Boundary = "%s"%elements[1]

@@ -24,19 +24,24 @@ class CamType(object):
         
         self._OpenHandle()
         
+        # read first part of stream
+        self._ReadMultipart()
+        self._ReadContentStrings()
+            
+    def _OpenHandle(self):
+        ''' function to be overloaded.
+        Must set self._Handle to something appropriate '''
+        pass
+        
     def read(self):
         ''' Read from mjpeg and returns the next image '''
-        if self._ImageCount == 0:
-            self._ReadMultipart()
-            self._ReadContentStrings()
-
         Img = self._ReadImage()
         self._ImageCount = self._ImageCount +1
         self._ReadContentStrings()
         return Img
 
     def _ReadImage(self):
-        ''' Read the next image. Default to reading the numbmer of bytes defined
+        ''' Read the next image. Default to reading the number of bytes defined
         by self._NextImageLength '''
         return self._Handle.read( self._NextImageLength )
          
@@ -44,8 +49,8 @@ class CamType(object):
         ''' Read the first line and check if it matches the boundary '''
         # first line is the boundary definition tag line
         line = string.rstrip( self._Handle.readline() )
-        if not line.startswith( self._Boundary ):
-            raise ValueError( "Malformed mjpeg: Missing multipart start tag" )
+        if not line.startswith( "--%s"%self._Boundary ):
+            raise ValueError( "Malformed mjpeg: Missing multipart start tag in line: %s"%line )
                    
     def _ReadContentStrings(self):
         ''' read the boundary, content-length and content-type
@@ -55,12 +60,12 @@ class CamType(object):
         line = string.rstrip( self._Handle.readline() )
         while line == '': # allow empty lines before
             line = string.rstrip( self._Handle.readline() )
-        if not line.startswith( self._Boundary ):
-            raise ValueError( "Malformed mjpeg: Image boundary not found" )
+        if not line.startswith( "--%s"%self._Boundary ):
+            raise ValueError( "Malformed mjpeg: Image boundary not found in line: %s"%line )
         
         # trendnet hack boundary and contenttype is on same line...
         # TODO: check on content-length
-        if line == "%s--"%self._Boundary: 
+        if line == "--%s--"%self._Boundary: 
             line = string.rstrip( self._Handle.readline() )
 
         (type, value) = string.split( line, ": ", 1)
@@ -79,3 +84,18 @@ class CamType(object):
             raise ValueError("Malformed mjpeg: missing empty line")
 
            
+    def BoundaryText(self):
+        text  = "\r\n--%s\r\n"%self._Boundary
+        #text += "Content-length: %d\r\n" % self._NextImageLength
+        text += "Content-type: %s\r\n" %self._JpegContentType
+        text += "\r\n"
+        return text
+    
+    def GetBoundary(self):
+        return self._Boundary
+    
+    def GetHeaders(self):
+        return {'content-type': 'multipart/x-mixed-replace;boundary=%s'%self._Boundary }  
+    
+    def DataAvailable(self):
+        return True  
