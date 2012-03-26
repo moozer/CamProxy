@@ -22,8 +22,10 @@ from SocketServer import ThreadingMixIn
 import time
 import sys
 
+import syslog
 
 PORT = 8000
+BadDataCounterMax = 10
 
 HelpText = '''
 Usage:
@@ -43,8 +45,7 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
         try:
             CamType, CamName = string.split( CameraString, '/', 1)
         except ValueError:
-            Mes  = 'Failed to read Camtype\n'
-            Mes += HelpText            
+            Mes  = 'Failed to read Camtype\n%s'%HelpText
             self.send_error(404, Mes) 
             return
 
@@ -62,14 +63,11 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                 BlackList = []
                 ExtraHeaders = {'content-type': 'multipart/x-mixed-replace;boundary=%s'%CamObject.GetBoundary()}                                
             else:
-                Mes  = 'Unknown Camera type: %s not in camera list\n' % CamType
-                Mes += HelpText
+                Mes  = 'Unknown Camera type: %s not in camera list\n%s' % (CamType, HelpText)
                 self.send_error(404, Mes) 
                 return
         except Exception as e:
-            Mes  = 'Failed to initialize camera: %s\n' % CamName
-            Mes += "Error: %s"%e
-            Mes += HelpText            
+            Mes  = 'Failed to initialize camera: %s\nError: %s\n%s' % (CamName, e, HelpText)
             self.send_error(404, Mes) 
             return
 
@@ -95,8 +93,16 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                     self.wfile.write( "\r\n" )            
                     sys.stderr.write(".")
                     time.sleep( 0.1 )
+                    BadDataCounter = 0
+
                 except ValueError:
+                    BadDataCounter += 1
+
+                    if BadDataCounter > BadDataCounterMax:
+                        raise ValueError( "%d bad images in sequence. Aborting"%BadDataCounter)
+                        
                     sys.stderr.write("Bad data. Ignoring.\n")
+                    self.log_message( "Bad data after %d images. Ignoring", CamObject.GetImageCount())
         except Exception as e:
             if e.errno == 32:
                 mes = "Graceful client disconnect after %d images\n" % CamObject.GetImageCount()
@@ -106,16 +112,24 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                 mes += "Exception caught: %s " % e
                 sys.stderr.write(mes)
                 self.wfile.close()
-                
+
+            self.log_message( "Connection closed after %d images", CamObject.GetImageCount())
         CamObject.close()
 #        except IOError as e:
 #            print e
 #            self.send_error(501,'Failed to forward request: %s' % CamName)
 
+    def log_message(self, msg_format, *args ):
+        DefMsg =  msg_format%args
+        syslog.syslog( "%s"%DefMsg)
+        sys.stderr.write( DefMsg )
+
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
 
 if __name__ == '__main__':
+    syslog.syslog('CamProxy starting (port %d)'%PORT)
+    
     DoMultiThreaded = True
     
     if DoMultiThreaded:
@@ -134,5 +148,7 @@ if __name__ == '__main__':
             print "something went wrong %s" % e
             
         print "and closing socket"
+
         httpd.socket.close()
    
+    syslog.syslog('CamProxy closed (port %d)'%PORT)
