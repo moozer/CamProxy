@@ -24,7 +24,8 @@ import sys
 
 import syslog
 
-PORT = 8000
+# port number to use for the camproxy
+PORT = 8001
 
 
 class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
@@ -48,6 +49,11 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
 
         # Parsing to get the Camera type
         CameraString = string.lstrip(self.path, '/')
+        
+        if CameraString == "":
+            self.send_response(200, self.HelpText )    
+            return
+            
         try:
             CamType, CamName = string.split( CameraString, '/', 1)
         except ValueError:
