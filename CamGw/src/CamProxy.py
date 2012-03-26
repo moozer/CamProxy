@@ -39,7 +39,7 @@ and host is resolvable name to the camera (or filename)
 class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
     ''' Acts as authenticating gateway to samsung web tx boxes and other cam types '''
     def do_GET(self):
-#        try:
+
         CameraString = string.lstrip(self.path, '/')
 
         try:
@@ -99,7 +99,8 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                     BadDataCounter += 1
 
                     if BadDataCounter > BadDataCounterMax:
-                        raise ValueError( "%d bad images in sequence. Aborting"%BadDataCounter)
+                        self.send_error(500, "%d bad images in sequence. Aborting"%BadDataCounter)
+                        return
                         
                     sys.stderr.write("Bad data. Ignoring.\n")
                     self.log_message( "Bad data after %d images. Ignoring", CamObject.GetImageCount())
@@ -115,9 +116,6 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
 
             self.log_message( "Connection closed after %d images", CamObject.GetImageCount())
         CamObject.close()
-#        except IOError as e:
-#            print e
-#            self.send_error(501,'Failed to forward request: %s' % CamName)
 
     def log_message(self, msg_format, *args ):
         DefMsg =  msg_format%args
@@ -130,7 +128,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 if __name__ == '__main__':
     syslog.syslog('CamProxy starting (port %d)'%PORT)
     
-    DoMultiThreaded = True
+    DoMultiThreaded = False
     
     if DoMultiThreaded:
         server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
