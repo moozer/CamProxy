@@ -25,30 +25,37 @@ import sys
 import syslog
 
 PORT = 8000
-BadDataCounterMax = 10
 
-HelpText = '''
-Usage:
-server:%d/<Camtype>/<host>
-
-With Camtype being File, WebTx or Trendnet
-and host is resolvable name to the camera (or filename)
-
-''' % (PORT)
 
 class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
+    # no of bad images before error is raised
+    BadDataCounterMax = 10
+
+    # some usage text for the user    
+    HelpText = '''
+    Usage:
+    server:%d/<Camtype>/<host>
+    
+    With Camtype being File, WebTx or Trendnet
+    and host is resolvable name to the camera (or filename)    
+    ''' % (PORT)
+    
+    # Sleep time between jpegs (to avoid overflow)
+    SleepTimeBetweenImages = 0.1
+    
     ''' Acts as authenticating gateway to samsung web tx boxes and other cam types '''
     def do_GET(self):
 
+        # Parsing to get the Camera type
         CameraString = string.lstrip(self.path, '/')
-
         try:
             CamType, CamName = string.split( CameraString, '/', 1)
         except ValueError:
-            Mes  = 'Failed to read Camtype\n%s'%HelpText
+            Mes  = 'Failed to read Camtype\n%s'%self.HelpText
             self.send_error(404, Mes) 
             return
 
+        # Initialising CamObject based on URL.
         try:
             if CamType == 'WebTx':
                 CamObject = WebTxVideoCamType( CamName )
@@ -63,12 +70,12 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                 BlackList = []
                 ExtraHeaders = {'content-type': 'multipart/x-mixed-replace;boundary=%s'%CamObject.GetBoundary()}                                
             else:
-                Mes  = 'Unknown Camera type: %s not in camera list\n%s' % (CamType, HelpText)
+                Mes = 'Unknown Camera type: %s not in camera list\n%s' % (CamType, self.HelpText)
                 self.send_error(404, Mes) 
                 return
         except Exception as e:
-            Mes  = 'Failed to initialize camera: %s\nError: %s\n%s' % (CamName, e, HelpText)
-            self.send_error(404, Mes) 
+            Mes  = 'Failed to initialize camera: %s\nError: %s\n%s' % (CamName, e, self.HelpText)
+            self.send_error(500, Mes) 
             return
 
         # and pipe data based on camera object.
@@ -91,16 +98,14 @@ class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
                     self.wfile.write( CamObject.BoundaryText() )    
                     self.wfile.write( CamObject.read() )
                     self.wfile.write( "\r\n" )            
-                    sys.stderr.write(".")
-                    time.sleep( 0.1 )
+                    time.sleep( self.SleepTimeBetweenImages )
                     BadDataCounter = 0
 
                 except ValueError:
                     BadDataCounter += 1
 
-                    if BadDataCounter > BadDataCounterMax:
-                        self.send_error(500, "%d bad images in sequence. Aborting"%BadDataCounter)
-                        return
+                    if BadDataCounter > self.BadDataCounterMax:
+                        raise ValueError( "%d bad images in sequence. Aborting"%BadDataCounter)
                         
                     sys.stderr.write("Bad data. Ignoring.\n")
                     self.log_message( "Bad data after %d images. Ignoring", CamObject.GetImageCount())
