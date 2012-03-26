@@ -25,7 +25,7 @@ import sys
 import syslog
 
 # port number to use for the camproxy
-PORT = 8001
+PORT = 8000
 
 
 class CamGwHttpRequestHandler( BaseHTTPRequestHandler ):
@@ -139,7 +139,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 if __name__ == '__main__':
     syslog.syslog('CamProxy starting (port %d)'%PORT)
     
-    DoMultiThreaded = False
+    DoMultiThreaded = True
     
     if DoMultiThreaded:
         server = ThreadedHTTPServer(('', PORT), CamGwHttpRequestHandler)
